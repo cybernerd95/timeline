@@ -778,7 +778,7 @@
         // Convert to array and filter out very old events
         const events = [];
         const today = new Date();
-        const cutoffDate = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)); // 30 days ago
+        const cutoffDate = new Date(today.getTime()); 
         
         snapshot.forEach(doc => {
           const eventData = doc.data();
@@ -801,8 +801,8 @@
           
           // Remove events older than 30 days
           if (eventDate < cutoffDate) {
-            console.log("Removing old event:", doc.id);
-            deleteDoc(doc.ref).catch(err => console.error("Error deleting old event:", err));
+            console.log("Skipping  old event:", doc.id);
+            
           } else {
             events.push({ 
               id: doc.id, 
