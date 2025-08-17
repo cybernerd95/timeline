@@ -740,24 +740,42 @@
           const eventDiv = document.createElement('div');
           eventDiv.className = 'timeline-event';
           eventDiv.style.left = position + 'px';
+          eventDiv.style.width = '20px';
+          eventDiv.style.height = '20px';
           
-          // Create connector and content elements with random distances
+          // Calculate positions for connector and content
           const connectorHeight = randomDistance;
-          const contentPosition = randomDistance + 10; // 10px gap between line and box
+          const contentPosition = randomDistance + 15; // 15px gap between line and box
           
-          eventDiv.innerHTML = `
-            <div class="event-dot ${isToday ? 'today' : ''}" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')"></div>
-            <div class="event-connector ${isAbove ? 'above' : 'below'}" style="height: ${connectorHeight}px;"></div>
-            <div class="event-content ${isAbove ? 'above' : 'below'} ${isToday ? 'today-event' : ''}" style="${isAbove ? 'bottom' : 'top'}: ${contentPosition}px;">
-              <div class="event-title">${ev.title}</div>
-              <div class="event-date">${formatDate(ev.time)}</div>
-              <div class="event-time-left">${getTimeUntilEvent(ev.time)}</div>
-              <div class="event-actions">
-                <button class="btn btn-small" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')">Edit</button>
-                <button class="btn btn-small btn-danger" onclick="deleteEvent('${ev.id}')">Delete</button>
+          if (isAbove) {
+            eventDiv.innerHTML = `
+              <div class="event-dot ${isToday ? 'today' : ''}" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')"></div>
+              <div class="event-connector above" style="height: ${connectorHeight}px; top: -${connectorHeight}px;"></div>
+              <div class="event-content above ${isToday ? 'today-event' : ''}" style="bottom: ${contentPosition}px;">
+                <div class="event-title">${ev.title}</div>
+                <div class="event-date">${formatDate(ev.time)}</div>
+                <div class="event-time-left">${getTimeUntilEvent(ev.time)}</div>
+                <div class="event-actions">
+                  <button class="btn btn-small" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')">Edit</button>
+                  <button class="btn btn-small btn-danger" onclick="deleteEvent('${ev.id}')">Delete</button>
+                </div>
               </div>
-            </div>
-          `;
+            `;
+          } else {
+            eventDiv.innerHTML = `
+              <div class="event-dot ${isToday ? 'today' : ''}" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')"></div>
+              <div class="event-connector below" style="height: ${connectorHeight}px; bottom: -${connectorHeight}px;"></div>
+              <div class="event-content below ${isToday ? 'today-event' : ''}" style="top: ${contentPosition}px;">
+                <div class="event-title">${ev.title}</div>
+                <div class="event-date">${formatDate(ev.time)}</div>
+                <div class="event-time-left">${getTimeUntilEvent(ev.time)}</div>
+                <div class="event-actions">
+                  <button class="btn btn-small" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')">Edit</button>
+                  <button class="btn btn-small btn-danger" onclick="deleteEvent('${ev.id}')">Delete</button>
+                </div>
+              </div>
+            `;
+          }
           
           timelineDiv.appendChild(eventDiv);
           eventIndex++;
