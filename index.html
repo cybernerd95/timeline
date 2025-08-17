@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Secure Timeline</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
   <style>
     body { font-family: sans-serif; max-width: 700px; margin: auto; padding: 20px; }
     #timelineSection { display: none; }
@@ -20,14 +17,14 @@
     <h2>Login / Register</h2>
     <input type="email" id="email" placeholder="Email"><br><br>
     <input type="password" id="password" placeholder="Password"><br><br>
-    <button id="loginBtn">Login</button>
-    <button id="registerBtn">Register</button>
+    <button type="button" id="loginBtn">Login</button>
+    <button type="button" id="registerBtn">Register</button>
     <p id="authError" style="color:red;"></p>
   </div>
 
-  <!-- Timeline Section (hidden until login) -->
+  <!-- Timeline Section -->
   <div id="timelineSection">
-    <button id="logoutBtn">Logout</button>
+    <button type="button" id="logoutBtn">Logout</button>
     <h1>📅 My Timeline</h1>
 
     <form id="eventForm">
@@ -40,7 +37,12 @@
     <div id="timeline"></div>
   </div>
 
-  <script>
+  <!-- Firebase Modular Script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
     // 🔹 Replace with your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyAkWss4GTWopwjrqAEe71PUhiWHdGKTMlw",
@@ -51,20 +53,19 @@
       appId: "1:329516169618:web:e1fdd96fccab750f68294b"
     };
 
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
     // Elements
-    const authSection = document.getElementById("authSection");
-    const timelineSection = document.getElementById("timelineSection");
-    const emailInput = document.getElementById("email");
-    const passwordInput = document.getElementById("password");
     const loginBtn = document.getElementById("loginBtn");
     const registerBtn = document.getElementById("registerBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const authError = document.getElementById("authError");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const authSection = document.getElementById("authSection");
+    const timelineSection = document.getElementById("timelineSection");
     const eventForm = document.getElementById("eventForm");
     const timeInput = document.getElementById("time");
     const titleInput = document.getElementById("title");
@@ -72,27 +73,24 @@
 
     // Register
     registerBtn.addEventListener("click", () => {
-      auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value)
+      createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value)
         .catch(err => authError.textContent = err.message);
     });
 
     // Login
     loginBtn.addEventListener("click", () => {
-      auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
+      signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value)
         .catch(err => authError.textContent = err.message);
     });
 
     // Logout
-    logoutBtn.addEventListener("click", () => {
-      auth.signOut();
-    });
+    logoutBtn.addEventListener("click", () => signOut(auth));
 
     // Auth State
-    auth.onAuthStateChanged(user => {
-      if (user) {
+    onAuthStateChanged(auth, user => {
+      if(user){
         authSection.style.display = "none";
         timelineSection.style.display = "block";
-        authError.textContent = "";
         loadEvents();
       } else {
         authSection.style.display = "block";
@@ -102,9 +100,9 @@
     });
 
     // Add Event
-    eventForm.addEventListener("submit", async (e) => {
+    eventForm.addEventListener("submit", async e => {
       e.preventDefault();
-      await db.collection("events").add({
+      await addDoc(collection(db, "events"), {
         time: timeInput.value,
         title: titleInput.value,
         user: auth.currentUser.email
@@ -114,7 +112,8 @@
 
     // Load Events
     function loadEvents() {
-      db.collection("events").orderBy("time").onSnapshot(snapshot => {
+      const q = query(collection(db, "events"), orderBy("time"));
+      onSnapshot(q, snapshot => {
         timelineDiv.innerHTML = "";
         snapshot.forEach(doc => {
           const ev = doc.data();
