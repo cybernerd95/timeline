@@ -2,66 +2,131 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>My Timeline</title>
+  <title>Secure Timeline</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
-    .event { border-left: 2px solid #333; margin: 10px 0; padding-left: 10px; }
+    body { font-family: sans-serif; max-width: 700px; margin: auto; padding: 20px; }
+    #timelineSection { display: none; }
+    .event { border-left: 3px solid #333; padding-left: 10px; margin: 10px 0; }
     .time { font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>📅 My Timeline</h1>
 
-  <form id="eventForm">
-    <input type="datetime-local" id="time" required>
-    <input type="text" id="title" placeholder="Event title" required>
-    <button type="submit">Add Event</button>
-  </form>
+  <!-- Authentication Section -->
+  <div id="authSection">
+    <h2>Login / Register</h2>
+    <input type="email" id="email" placeholder="Email"><br><br>
+    <input type="password" id="password" placeholder="Password"><br><br>
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn">Register</button>
+    <p id="authError" style="color:red;"></p>
+  </div>
 
-  <h2>Timeline</h2>
-  <div id="timeline"></div>
+  <!-- Timeline Section (hidden until login) -->
+  <div id="timelineSection">
+    <button id="logoutBtn">Logout</button>
+    <h1>📅 My Timeline</h1>
+
+    <form id="eventForm">
+      <input type="datetime-local" id="time" required>
+      <input type="text" id="title" placeholder="Event title" required>
+      <button type="submit">Add Event</button>
+    </form>
+
+    <h2>Timeline</h2>
+    <div id="timeline"></div>
+  </div>
 
   <script>
-    // 🔹 Your Firebase config (replace with yours)
+    // 🔹 Replace with your Firebase config
     const firebaseConfig = {
-    apiKey: "AIzaSyAkWss4GTWopwjrqAEe71PUhiWHdGKTMlw",
-    authDomain: "tasktimeline-4dffe.firebaseapp.com",
-    projectId: "tasktimeline-4dffe",
-    storageBucket: "tasktimeline-4dffe.firebasestorage.app",
-    messagingSenderId: "329516169618",
-    appId: "1:329516169618:web:e1fdd96fccab750f68294b"
+      apiKey: "AIzaSyAkWss4GTWopwjrqAEe71PUhiWHdGKTMlw",
+      authDomain: "tasktimeline-4dffe.firebaseapp.com",
+      projectId: "tasktimeline-4dffe",
+      storageBucket: "tasktimeline-4dffe.firebasestorage.app",
+      messagingSenderId: "329516169618",
+      appId: "1:329516169618:web:e1fdd96fccab750f68294b"
     };
 
+    // Initialize Firebase
     const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.firestore();
 
-    const form = document.getElementById("eventForm");
-    const timeline = document.getElementById("timeline");
+    // Elements
+    const authSection = document.getElementById("authSection");
+    const timelineSection = document.getElementById("timelineSection");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const loginBtn = document.getElementById("loginBtn");
+    const registerBtn = document.getElementById("registerBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const authError = document.getElementById("authError");
+    const eventForm = document.getElementById("eventForm");
+    const timeInput = document.getElementById("time");
+    const titleInput = document.getElementById("title");
+    const timelineDiv = document.getElementById("timeline");
 
-    // Add event to Firestore
-    form.addEventListener("submit", async (e) => {
+    // Register
+    registerBtn.addEventListener("click", () => {
+      auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value)
+        .catch(err => authError.textContent = err.message);
+    });
+
+    // Login
+    loginBtn.addEventListener("click", () => {
+      auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
+        .catch(err => authError.textContent = err.message);
+    });
+
+    // Logout
+    logoutBtn.addEventListener("click", () => {
+      auth.signOut();
+    });
+
+    // Auth State
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        authSection.style.display = "none";
+        timelineSection.style.display = "block";
+        authError.textContent = "";
+        loadEvents();
+      } else {
+        authSection.style.display = "block";
+        timelineSection.style.display = "none";
+        timelineDiv.innerHTML = "";
+      }
+    });
+
+    // Add Event
+    eventForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const time = document.getElementById("time").value;
-      const title = document.getElementById("title").value;
-      await db.collection("events").add({ time, title });
-      form.reset();
+      await db.collection("events").add({
+        time: timeInput.value,
+        title: titleInput.value,
+        user: auth.currentUser.email
+      });
+      eventForm.reset();
     });
 
-    // Listen for changes in Firestore
-    db.collection("events").orderBy("time").onSnapshot(snapshot => {
-      timeline.innerHTML = "";
-      snapshot.forEach(doc => {
-        const ev = doc.data();
-        timeline.innerHTML += `
-          <div class="event">
-            <div class="time">${ev.time}</div>
-            <div class="title">${ev.title}</div>
-          </div>
-        `;
+    // Load Events
+    function loadEvents() {
+      db.collection("events").orderBy("time").onSnapshot(snapshot => {
+        timelineDiv.innerHTML = "";
+        snapshot.forEach(doc => {
+          const ev = doc.data();
+          timelineDiv.innerHTML += `
+            <div class="event">
+              <div class="time">${ev.time}</div>
+              <div class="title">${ev.title} <small>(${ev.user})</small></div>
+            </div>
+          `;
+        });
       });
-    });
+    }
   </script>
 </body>
 </html>
