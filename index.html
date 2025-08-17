@@ -585,8 +585,7 @@
     function loadEvents() {
       const q = query(
         collection(db, "events"), 
-        where("user", "==", auth.currentUser.email),
-        orderBy("timestamp")
+        where("user", "==", auth.currentUser.email)
       );
       onSnapshot(q, snapshot => {
         timelineDiv.innerHTML = "";
@@ -602,24 +601,31 @@
           return;
         }
 
-        let eventIndex = 0;
+        // Convert to array and sort by timestamp
+        const events = [];
         snapshot.forEach(doc => {
-          const ev = doc.data();
+          events.push({ id: doc.id, ...doc.data() });
+        });
+        
+        events.sort((a, b) => a.timestamp - b.timestamp);
+
+        let eventIndex = 0;
+        events.forEach(ev => {
           const isEvenIndex = eventIndex % 2 === 0;
           const isTodayEvent = isToday(ev.time);
           
           const eventDiv = document.createElement('div');
           eventDiv.className = 'timeline-event';
           eventDiv.innerHTML = `
-            <div class="event-dot ${isTodayEvent ? 'today' : ''}" onclick="openEditModal('${doc.id}', '${ev.title}', '${ev.time}')">
+            <div class="event-dot ${isTodayEvent ? 'today' : ''}" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')">
               ${isTodayEvent ? '<div class="today-indicator">TODAY</div>' : ''}
             </div>
             <div class="event-content ${isEvenIndex ? '' : 'below'}">
               <div class="event-title">${ev.title}</div>
               <div class="event-date">${formatDate(ev.time)}</div>
               <div class="event-actions">
-                <button class="btn btn-small" onclick="openEditModal('${doc.id}', '${ev.title}', '${ev.time}')">Edit</button>
-                <button class="btn btn-small btn-danger" onclick="deleteEvent('${doc.id}')">Delete</button>
+                <button class="btn btn-small" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')">Edit</button>
+                <button class="btn btn-small btn-danger" onclick="deleteEvent('${ev.id}')">Delete</button>
               </div>
             </div>
           `;
