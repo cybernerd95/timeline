@@ -140,8 +140,8 @@
     .timeline-line {
       position: absolute;
       top: 50%;
-      left: 50px;
-      right: 50px;
+      left: 0;
+      right: 0;
       height: 4px;
       background: linear-gradient(to right, #667eea, #764ba2);
       border-radius: 2px;
@@ -153,6 +153,7 @@
       position: relative;
       height: 200px;
       z-index: 2;
+      min-width: 100%;
     }
 
     .timeline-event {
@@ -302,11 +303,12 @@
     .today-marker {
       position: absolute;
       top: 30%;
-      width: 2px;
+      width: 3px;
       height: 40%;
       background: #ff6b6b;
       z-index: 5;
       box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+      transform: translateX(-50%);
     }
 
     .today-marker::before {
@@ -323,6 +325,20 @@
       font-weight: 600;
       white-space: nowrap;
       box-shadow: 0 2px 10px rgba(255, 107, 107, 0.3);
+      margin-bottom: 5px;
+    }
+
+    .today-marker::after {
+      content: '';
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 5px solid #ff6b6b;
     }
 
     .timeline-years {
@@ -666,18 +682,52 @@
       }
     });
 
-    // Get evenly distributed position based on chronological order
-    function getEvenlyDistributedPosition(chronologicalIndex, totalEvents, containerWidth) {
-      const margin = 100; // 50px margin on each side
-      const availableWidth = containerWidth - margin;
+    // Calculate time range for timeline positioning
+    function calculateTimeRange(events) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
       
-      if (totalEvents === 1) {
-        return containerWidth / 2;
+      if (events.length === 0) {
+        const startTime = today.getTime() - (30 * 24 * 60 * 60 * 1000); // 30 days before today
+        const endTime = today.getTime() + (30 * 24 * 60 * 60 * 1000);   // 30 days after today
+        return { startTime, endTime };
       }
       
-      // Distribute events evenly across available width based on chronological order
-      const spacing = availableWidth / (totalEvents - 1);
-      return 50 + (chronologicalIndex * spacing);
+      const eventTimes = events.map(e => e.timestamp);
+      const minEventTime = Math.min(...eventTimes);
+      const maxEventTime = Math.max(...eventTimes);
+      
+      // Include today in the range
+      const minTime = Math.min(minEventTime, today.getTime());
+      const maxTime = Math.max(maxEventTime, today.getTime());
+      
+      // Add padding to the range (at least 7 days on each side)
+      const range = maxTime - minTime;
+      const padding = Math.max(range * 0.2, 7 * 24 * 60 * 60 * 1000); // 20% padding or 7 days minimum
+      
+      return {
+        startTime: minTime - padding,
+        endTime: maxTime + padding
+      };
+    }
+
+    // Get position based on time
+    function getTimeBasedPosition(timestamp, timeRange, containerWidth) {
+      const margin = 100;
+      const availableWidth = containerWidth - (2 * margin);
+      
+      const timeSpan = timeRange.endTime - timeRange.startTime;
+      
+      // Prevent division by zero
+      if (timeSpan === 0) {
+        return containerWidth / 2; // Center position if all events are at the same time
+      }
+      
+      const relativePosition = (timestamp - timeRange.startTime) / timeSpan;
+      const position = margin + (relativePosition * availableWidth);
+      
+      // Ensure position is within bounds
+      return Math.max(margin, Math.min(containerWidth - margin, position));
     }
 
     // Calculate time until/since event
@@ -696,7 +746,7 @@
       }
     }
 
-    // Load Events with chronological positioning - MODIFIED FOR PROPER DATE ORDERING
+    // Load Events with hybrid positioning (time-based with fallback to even distribution)
     function loadEvents() {
       console.log("Loading events for user:", auth.currentUser?.email);
       
@@ -723,27 +773,44 @@
           return;
         }
 
-        // Convert to array and filter out old events
+        // Convert to array and filter out very old events
         const events = [];
         const today = new Date();
-        const cutoffDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000)); // Only remove events older than 7 days
+        const cutoffDate = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)); // 30 days ago
         
         snapshot.forEach(doc => {
           const eventData = doc.data();
           const eventDate = new Date(eventData.time);
           
-          console.log("Event found:", doc.id, eventData);
+          // Ensure we have a proper timestamp
+          let timestamp = eventData.timestamp;
+          if (!timestamp || isNaN(timestamp)) {
+            timestamp = eventDate.getTime();
+            console.log("Fixed timestamp for event:", doc.id, "from", eventData.timestamp, "to", timestamp);
+          }
           
-          // Remove events older than 7 days
+          console.log("Event found:", doc.id, {
+            title: eventData.title,
+            time: eventData.time,
+            originalTimestamp: eventData.timestamp,
+            fixedTimestamp: timestamp,
+            eventDate: eventDate
+          });
+          
+          // Remove events older than 30 days
           if (eventDate < cutoffDate) {
             console.log("Removing old event:", doc.id);
             deleteDoc(doc.ref).catch(err => console.error("Error deleting old event:", err));
           } else {
-            events.push({ id: doc.id, ...eventData });
+            events.push({ 
+              id: doc.id, 
+              ...eventData, 
+              timestamp: timestamp // Use the fixed timestamp
+            });
           }
         });
         
-        // Sort events by timestamp for chronological order - THIS IS THE KEY FIX
+        // Sort events by timestamp
         events.sort((a, b) => a.timestamp - b.timestamp);
         console.log("Filtered and sorted events:", events);
 
@@ -760,16 +827,56 @@
 
         const containerWidth = timelineDiv.parentElement.clientWidth;
         
-        // Create events evenly distributed but in chronological order
-        events.forEach((event, chronologicalIndex) => {
+        // Always use even distribution for consistent spacing
+        console.log("Using even distribution for all events");
+        
+        // Position today marker at the leftmost position
+        const margin = 150;
+        const left_1 =40;
+        const todayPosition = left_1; // Always at the left margin
+        
+        console.log("Today position (leftmost):", todayPosition);
+        
+        // Add today marker at leftmost position
+        const todayMarker = document.createElement('div');
+        todayMarker.className = 'today-marker';
+        todayMarker.style.left = todayPosition + 'px';
+        timelineDiv.appendChild(todayMarker);
+
+        // Create events with even distribution starting after today marker
+        events.forEach((event, index) => {
           const eventDate = new Date(event.time);
           const isToday = today.toDateString() === eventDate.toDateString();
           
-          // Get evenly distributed position based on chronological order
-          const position = getEvenlyDistributedPosition(chronologicalIndex, events.length, containerWidth);
+          console.log(`Event ${index}:`, event.title, "Timestamp:", event.timestamp, "Date:", eventDate, "Is today:", isToday);
           
-          // Alternate between above and below based on chronological order
-          const isAbove = chronologicalIndex % 2 === 0;
+          // Calculate position with today marker at leftmost
+          const availableWidth = containerWidth - (2 * margin);
+          let position;
+          
+          if (events.length === 1) {
+            // If only one event, place it at a reasonable distance from today marker
+            position = margin + (availableWidth * 0.3); // 30% from left
+          } else {
+            // Distribute events evenly across the remaining space
+            const spacing = availableWidth / events.length;
+            position = margin + ((index + 1) * spacing);
+          }
+          
+          // Special handling for today events - they can overlap with today marker
+          if (isToday) {
+            position = todayPosition; // Place exactly on today marker
+          }
+          
+          console.log(`Event ${index} position:`, position, "Is today:", isToday);
+          
+          // Alternate between above and below, with today events always above
+          let isAbove;
+          if (isToday) {
+            isAbove = true; // Today events always go above and overlap today marker
+          } else {
+            isAbove = index % 2 === 0;
+          }
           
           // Fixed connector height and spacing for consistency
           const connectorHeight = 70;
@@ -782,28 +889,28 @@
           
           if (isAbove) {
             eventDiv.innerHTML = `
-              <div class="event-marker ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')"></div>
+              <div class="event-marker ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title.replace(/'/g, "\\'")}', '${event.time}')"></div>
               <div class="event-connector above" style="height: ${connectorHeight}px;"></div>
-              <div class="event-box above ${isToday ? 'today' : ''}" style="bottom: ${totalDistance}px;" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')">
+              <div class="event-box above ${isToday ? 'today' : ''}" style="bottom: ${totalDistance}px;" onclick="openEditModal('${event.id}', '${event.title.replace(/'/g, "\\'")}', '${event.time}')">
                 <div class="event-title">${event.title}</div>
                 <div class="event-date">${formatDate(event.time)}</div>
                 <div class="event-time-left">${getTimeUntilEvent(event.time)}</div>
                 <div class="event-actions">
-                  <button class="btn btn-small" onclick="event.stopPropagation(); openEditModal('${event.id}', '${event.title}', '${event.time}')">Edit</button>
+                  <button class="btn btn-small" onclick="event.stopPropagation(); openEditModal('${event.id}', '${event.title.replace(/'/g, "\\'")}', '${event.time}')">Edit</button>
                   <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
                 </div>
               </div>
             `;
           } else {
             eventDiv.innerHTML = `
-              <div class="event-marker ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')"></div>
+              <div class="event-marker ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title.replace(/'/g, "\\'")}', '${event.time}')"></div>
               <div class="event-connector below" style="height: ${connectorHeight}px;"></div>
-              <div class="event-box below ${isToday ? 'today' : ''}" style="top: ${totalDistance}px;" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')">
+              <div class="event-box below ${isToday ? 'today' : ''}" style="top: ${totalDistance}px;" onclick="openEditModal('${event.id}', '${event.title.replace(/'/g, "\\'")}', '${event.time}')">
                 <div class="event-title">${event.title}</div>
                 <div class="event-date">${formatDate(event.time)}</div>
                 <div class="event-time-left">${getTimeUntilEvent(event.time)}</div>
                 <div class="event-actions">
-                  <button class="btn btn-small" onclick="event.stopPropagation(); openEditModal('${event.id}', '${event.title}', '${event.time}')">Edit</button>
+                  <button class="btn btn-small" onclick="event.stopPropagation(); openEditModal('${event.id}', '${event.title.replace(/'/g, "\\'")}', '${event.time}')">Edit</button>
                   <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
                 </div>
               </div>
@@ -812,23 +919,42 @@
           
           timelineDiv.appendChild(eventDiv);
         });
+
+    // Get evenly distributed position based on chronological order (fallback method)
+    function getEvenlyDistributedPosition(chronologicalIndex, totalEvents, containerWidth) {
+      const margin = 150; // space on both sides
+      const availableWidth = containerWidth - (2 * margin);
+
+      if (totalEvents === 1) {
+        return containerWidth / 2;
+      }
+
+      const spacing = availableWidth / (totalEvents - 1);
+      return margin + (chronologicalIndex * spacing);
+    }
+
+        // Generate year markers based on time range
+        const startYear = new Date(timeRange.startTime).getFullYear();
+        const endYear = new Date(timeRange.endTime).getFullYear();
+        const yearsDiv = document.getElementById("timelineYears");
         
-        // Generate year markers based on event dates
-        if (events.length > 0) {
-          const years = [...new Set(events.map(e => new Date(e.time).getFullYear()))].sort();
-          const yearsDiv = document.getElementById("timelineYears");
+        for (let year = startYear; year <= endYear; year++) {
+          const yearDiv = document.createElement('div');
+          yearDiv.textContent = year;
           
-          years.forEach(year => {
-            const yearDiv = document.createElement('div');
-            yearDiv.textContent = year;
-            yearsDiv.appendChild(yearDiv);
-          });
+          // Position year marker based on January 1st of that year
+          const yearStart = new Date(year, 0, 1).getTime();
+          const yearPosition = getTimeBasedPosition(yearStart, timeRange, containerWidth);
+          yearDiv.style.position = 'absolute';
+          yearDiv.style.left = yearPosition + 'px';
+          
+          yearsDiv.appendChild(yearDiv);
         }
       }, (error) => {
         console.error("Error loading events:", error);
         timelineDiv.innerHTML = `
           <div class="empty-timeline">
-            <div style="font-size: 4em; margin-bottom: 20px;">❌</div>
+            <div style="font-size: 4em; margin-bottom: 20px;">⚠</div>
             <h3>Error loading events</h3>
             <p>${error.message}</p>
           </div>
