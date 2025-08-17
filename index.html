@@ -283,7 +283,7 @@
       top: 50%;
       left: 200px;
       width: 3px;
-      height: 120px;
+      height: 60px;
       background: #ff6b6b;
       transform: translateY(-50%);
       z-index: 4;
@@ -293,16 +293,17 @@
     .today-marker::before {
       content: 'TODAY';
       position: absolute;
-      top: -25px;
+      bottom: 62px;
       left: 50%;
       transform: translateX(-50%);
       background: #ff6b6b;
       color: white;
-      padding: 4px 8px;
+      padding: 8px 12px;
       border-radius: 12px;
-      font-size: 0.7em;
+      font-size: 0.8em;
       font-weight: 600;
       white-space: nowrap;
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
     }
 
     .modal {
@@ -644,6 +645,11 @@
       return 200 + (daysDiff * 80);
     }
 
+    // Generate random distance for event boxes (30px to 80px from timeline)
+    function getRandomDistance() {
+      return Math.floor(Math.random() * (80 - 30 + 1)) + 30;
+    }
+
     // Calculate time until/since event
     function getTimeUntilEvent(eventDate) {
       const now = new Date();
@@ -729,15 +735,20 @@
           const eventDate = new Date(ev.time);
           const isToday = today.toDateString() === eventDate.toDateString();
           const position = getEventPosition(ev.time);
+          const randomDistance = getRandomDistance();
           
           const eventDiv = document.createElement('div');
           eventDiv.className = 'timeline-event';
           eventDiv.style.left = position + 'px';
           
+          // Create connector and content elements with random distances
+          const connectorHeight = randomDistance;
+          const contentPosition = randomDistance + 10; // 10px gap between line and box
+          
           eventDiv.innerHTML = `
             <div class="event-dot ${isToday ? 'today' : ''}" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')"></div>
-            <div class="event-connector ${isAbove ? 'above' : 'below'}"></div>
-            <div class="event-content ${isAbove ? 'above' : 'below'}">
+            <div class="event-connector ${isAbove ? 'above' : 'below'}" style="height: ${connectorHeight}px;"></div>
+            <div class="event-content ${isAbove ? 'above' : 'below'} ${isToday ? 'today-event' : ''}" style="${isAbove ? 'bottom' : 'top'}: ${contentPosition}px;">
               <div class="event-title">${ev.title}</div>
               <div class="event-date">${formatDate(ev.time)}</div>
               <div class="event-time-left">${getTimeUntilEvent(ev.time)}</div>
