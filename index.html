@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>My Timeline</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+    .event { border-left: 2px solid #333; margin: 10px 0; padding-left: 10px; }
+    .time { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>📅 My Timeline</h1>
+
+  <form id="eventForm">
+    <input type="datetime-local" id="time" required>
+    <input type="text" id="title" placeholder="Event title" required>
+    <button type="submit">Add Event</button>
+  </form>
+
+  <h2>Timeline</h2>
+  <div id="timeline"></div>
+
+  <script>
+    // 🔹 Your Firebase config (replace with yours)
+    const firebaseConfig = {
+    apiKey: "AIzaSyAkWss4GTWopwjrqAEe71PUhiWHdGKTMlw",
+    authDomain: "tasktimeline-4dffe.firebaseapp.com",
+    projectId: "tasktimeline-4dffe",
+    storageBucket: "tasktimeline-4dffe.firebasestorage.app",
+    messagingSenderId: "329516169618",
+    appId: "1:329516169618:web:e1fdd96fccab750f68294b"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const form = document.getElementById("eventForm");
+    const timeline = document.getElementById("timeline");
+
+    // Add event to Firestore
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const time = document.getElementById("time").value;
+      const title = document.getElementById("title").value;
+      await db.collection("events").add({ time, title });
+      form.reset();
+    });
+
+    // Listen for changes in Firestore
+    db.collection("events").orderBy("time").onSnapshot(snapshot => {
+      timeline.innerHTML = "";
+      snapshot.forEach(doc => {
+        const ev = doc.data();
+        timeline.innerHTML += `
+          <div class="event">
+            <div class="time">${ev.time}</div>
+            <div class="title">${ev.title}</div>
+          </div>
+        `;
+      });
+    });
+  </script>
+</body>
+</html>
