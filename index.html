@@ -19,7 +19,7 @@
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
       background: white;
       border-radius: 20px;
@@ -130,180 +130,223 @@
 
     .timeline-container {
       position: relative;
-      padding: 40px 0;
+      padding: 150px 50px;
       overflow-x: auto;
+      min-height: 400px;
+      background: #fafbfc;
+      border-radius: 15px;
+    }
+
+    .timeline-header {
+      text-align: center;
+      margin-bottom: 40px;
+      background: #4a4a4a;
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 1.5em;
+      font-weight: 600;
     }
 
     .timeline-line {
       position: absolute;
       top: 50%;
-      left: 0;
-      right: 0;
+      left: 50px;
+      right: 50px;
       height: 4px;
-      background: linear-gradient(to right, #667eea, #764ba2, #667eea);
+      background: linear-gradient(to right, #667eea, #764ba2);
       border-radius: 2px;
       transform: translateY(-50%);
-    }
-
-    .timeline-events {
-      display: flex;
-      position: relative;
-      min-height: 200px;
-      align-items: center;
-      gap: 100px;
-      padding: 0 50px;
-    }
-
-    .timeline-event {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 200px;
-      z-index: 2;
-    }
-
-    .event-dot {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: white;
-      border: 4px solid #667eea;
-      cursor: pointer;
-      transition: all 0.3s;
-      position: relative;
-      z-index: 3;
-    }
-
-    .event-dot::before {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 2px;
-      height: 0;
-      background: linear-gradient(to top, #667eea, #764ba2);
-      transition: height 0.6s ease-out;
       z-index: 1;
     }
 
-    .event-dot.animate::before {
-      height: 60px;
+    .timeline-events {
+      position: relative;
+      height: 200px;
+      z-index: 2;
     }
 
-    .event-dot.animate-below::before {
-      top: 100%;
-      height: 0;
-      transition: height 0.6s ease-out;
+    .timeline-event {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 3;
     }
 
-    .event-dot.animate-below.animate::before {
-      height: 60px;
+    .event-marker {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #667eea;
+      border: 3px solid white;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 4;
+      cursor: pointer;
+      transition: all 0.3s;
     }
 
-    .event-dot.today {
+    .event-marker:hover {
+      transform: translate(-50%, -50%) scale(1.2);
+      box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+    }
+
+    .event-marker.today {
       background: #ff6b6b;
-      border-color: #ff6b6b;
-      box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
       animation: pulse 2s infinite;
     }
 
     @keyframes pulse {
-      0% { box-shadow: 0 0 20px rgba(255, 107, 107, 0.5); }
-      50% { box-shadow: 0 0 30px rgba(255, 107, 107, 0.8); }
-      100% { box-shadow: 0 0 20px rgba(255, 107, 107, 0.5); }
+      0% { box-shadow: 0 0 10px rgba(255, 107, 107, 0.5); }
+      50% { box-shadow: 0 0 20px rgba(255, 107, 107, 0.8); }
+      100% { box-shadow: 0 0 10px rgba(255, 107, 107, 0.5); }
     }
 
-    .event-content {
+    .event-connector {
       position: absolute;
-      top: -80px;
-      background: white;
+      left: 50%;
+      width: 3px;
+      background: #667eea;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+
+    .event-connector.above {
+      bottom: 50%;
+      height: 60px;
+    }
+
+    .event-connector.below {
+      top: 50%;
+      height: 60px;
+    }
+
+    .event-connector::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .event-connector.above::after {
+      top: -8px;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-bottom: 8px solid #667eea;
+    }
+
+    .event-connector.below::after {
+      bottom: -8px;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 8px solid #667eea;
+    }
+
+    .event-box {
+      position: absolute;
+      min-width: 180px;
+      max-width: 220px;
       padding: 15px;
+      background: white;
       border-radius: 10px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
       border: 2px solid #667eea;
-      min-width: 180px;
-      text-align: center;
-      transform: translateX(-50%) translateY(20px);
       left: 50%;
-      opacity: 0;
-      transition: all 0.4s ease-out;
-      transition-delay: 0.6s;
+      transform: translateX(-50%);
+      cursor: pointer;
+      transition: all 0.3s;
     }
 
-    .event-content.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
+    .event-box:hover {
+      transform: translateX(-50%) translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     }
 
-    .event-content.below {
-      top: 40px;
-      transform: translateX(-50%) translateY(-20px);
+    .event-box.above {
+      bottom: 70px;
     }
 
-    .event-content.below.show {
-      transform: translateX(-50%) translateY(0);
+    .event-box.below {
+      top: 70px;
+    }
+
+    .event-box.today {
+      border-color: #ff6b6b;
+      background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
     }
 
     .event-title {
       font-weight: 600;
       color: #333;
-      margin-bottom: 4px;
-      font-size: 0.9em;
+      margin-bottom: 8px;
+      font-size: 1em;
     }
 
     .event-date {
-      font-size: 0.8em;
+      font-size: 0.85em;
       color: #666;
       margin-bottom: 8px;
     }
 
     .event-time-left {
-      font-size: 0.7em;
+      font-size: 0.75em;
       color: #999;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       font-style: italic;
     }
 
     .event-actions {
       display: flex;
-      gap: 4px;
+      gap: 5px;
       justify-content: center;
     }
 
     .btn-small {
-      padding: 4px 8px;
+      padding: 5px 10px;
       font-size: 11px;
       border-radius: 4px;
     }
 
     .today-marker {
       position: absolute;
-      top: 50%;
-      left: 200px;
-      width: 3px;
-      height: 60px;
+      top: 30%;
+      width: 2px;
+      height: 40%;
       background: #ff6b6b;
-      transform: translateY(-50%);
-      z-index: 4;
+      z-index: 5;
       box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
     }
 
     .today-marker::before {
       content: 'TODAY';
       position: absolute;
-      bottom: 62px;
+      bottom: 100%;
       left: 50%;
       transform: translateX(-50%);
       background: #ff6b6b;
       color: white;
-      padding: 8px 12px;
-      border-radius: 12px;
-      font-size: 0.8em;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 0.7em;
       font-weight: 600;
       white-space: nowrap;
-      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+      box-shadow: 0 2px 10px rgba(255, 107, 107, 0.3);
+    }
+
+    .timeline-years {
+      position: absolute;
+      bottom: 20px;
+      left: 50px;
+      right: 50px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9em;
+      color: #666;
+      font-weight: 500;
     }
 
     .modal {
@@ -343,8 +386,11 @@
     }
 
     .empty-timeline {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       text-align: center;
-      padding: 60px 20px;
       color: #666;
     }
 
@@ -360,29 +406,25 @@
     }
 
     @media (max-width: 768px) {
-      .timeline-events {
-        flex-direction: column;
-        gap: 60px;
-        padding: 20px;
+      .timeline-container {
+        padding: 100px 20px;
       }
-
+      
+      .event-box {
+        min-width: 150px;
+        max-width: 180px;
+        font-size: 0.9em;
+      }
+      
       .timeline-line {
-        top: 0;
-        bottom: 0;
-        left: 50%;
-        right: auto;
-        width: 4px;
-        height: auto;
-        transform: translateX(-50%);
-        background: linear-gradient(to bottom, #667eea, #764ba2, #667eea);
+        left: 20px;
+        right: 20px;
       }
-
-      .event-content {
-        position: relative;
-        top: 20px;
-        left: 0;
-        transform: none;
-        margin-left: 30px;
+      
+      .timeline-years {
+        left: 20px;
+        right: 20px;
+        font-size: 0.8em;
       }
     }
   </style>
@@ -437,6 +479,7 @@
       </div>
 
       <div class="timeline-container">
+        <div class="timeline-header">Key Events Timeline</div>
         <div class="timeline-line"></div>
         <div id="timeline" class="timeline-events">
           <div class="empty-timeline">
@@ -445,6 +488,7 @@
             <p>Add your first event to get started!</p>
           </div>
         </div>
+        <div class="timeline-years" id="timelineYears"></div>
       </div>
     </div>
   </div>
@@ -472,14 +516,13 @@
   </div>
 
   <script type="module">
-    // Firebase configuration (replace with your config)
+    // Firebase configuration - ADD YOUR CREDENTIALS HERE
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-    // Replace with your Firebase config
+    // Replace with your Firebase configuration
     const firebaseConfig = {
-      // Your Firebase configuration
       apiKey: "AIzaSyAkWss4GTWopwjrqAEe71PUhiWHdGKTMlw",
       authDomain: "tasktimeline-4dffe.firebaseapp.com",
       projectId: "tasktimeline-4dffe",
@@ -488,9 +531,12 @@
       appId: "1:329516169618:web:e1fdd96fccab750f68294b"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    let currentEditId = null;
 
     // DOM elements
     const loginBtn = document.getElementById("loginBtn");
@@ -509,8 +555,6 @@
     const editForm = document.getElementById("editForm");
     const editTitle = document.getElementById("editTitle");
     const editTime = document.getElementById("editTime");
-
-    let currentEditId = null;
 
     // Register
     registerBtn.addEventListener("click", () => {
@@ -560,7 +604,7 @@
     });
 
     // Add Event
-    eventForm.addEventListener("submit", async e => {
+    eventForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       console.log("Attempting to add event...");
       console.log("User:", auth.currentUser?.email);
@@ -584,7 +628,7 @@
     });
 
     // Edit Event
-    editForm.addEventListener("submit", async e => {
+    editForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (currentEditId) {
         try {
@@ -635,19 +679,16 @@
       }
     });
 
-    // Calculate position based on date difference from today
-    function getEventPosition(eventDate) {
-      const today = new Date();
-      const event = new Date(eventDate);
-      const daysDiff = Math.floor((event - today) / (1000 * 60 * 60 * 24));
+    // Calculate position based on timeline span
+    function getEventPosition(eventDate, minDate, maxDate, containerWidth) {
+      const eventTime = new Date(eventDate).getTime();
+      const minTime = minDate.getTime();
+      const maxTime = maxDate.getTime();
       
-      // Today is at position 200px, each day is 80px apart
-      return 200 + (daysDiff * 80);
-    }
-
-    // Generate random distance for event boxes (30px to 80px from timeline)
-    function getRandomDistance() {
-      return Math.floor(Math.random() * (80 - 30 + 1)) + 30;
+      if (maxTime === minTime) return containerWidth / 2;
+      
+      const percentage = (eventTime - minTime) / (maxTime - minTime);
+      return percentage * (containerWidth - 100) + 50; // 50px margin on each side
     }
 
     // Calculate time until/since event
@@ -666,12 +707,6 @@
       }
     }
 
-    // Auto-scroll timeline to show today
-    function scrollToToday() {
-      const timelineContainer = document.querySelector('.timeline-container');
-      timelineContainer.scrollLeft = Math.max(0, 200 - timelineContainer.clientWidth / 2);
-    }
-
     // Load Events - Filter by current user and remove old events
     function loadEvents() {
       console.log("Loading events for user:", auth.currentUser?.email);
@@ -685,22 +720,15 @@
         console.log("Snapshot received, size:", snapshot.size);
         
         timelineDiv.innerHTML = "";
-        
-        // Add today marker
-        const todayMarker = document.createElement('div');
-        todayMarker.className = 'today-marker';
-        timelineDiv.appendChild(todayMarker);
+        document.getElementById("timelineYears").innerHTML = "";
         
         if (snapshot.empty) {
           console.log("No events found for user");
-          timelineDiv.innerHTML += `
-            <div class="empty-timeline" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+          timelineDiv.innerHTML = `
+            <div class="empty-timeline">
               <div style="font-size: 4em; margin-bottom: 20px;">⏰</div>
               <h3>Your timeline is empty</h3>
               <p>Add your first personal event to get started!</p>
-              <small style="color: #999; margin-top: 10px; display: block;">
-                Debug: User ${auth.currentUser.email}
-              </small>
             </div>
           `;
           return;
@@ -709,7 +737,7 @@
         // Convert to array and filter out old events
         const events = [];
         const today = new Date();
-        const cutoffDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000)); // 7 days ago
+        const cutoffDate = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)); // 30 days ago
         
         snapshot.forEach(doc => {
           const eventData = doc.data();
@@ -717,7 +745,7 @@
           
           console.log("Event found:", doc.id, eventData);
           
-          // Remove events older than 7 days
+          // Remove events older than 30 days
           if (eventDate < cutoffDate) {
             console.log("Removing old event:", doc.id);
             deleteDoc(doc.ref).catch(err => console.error("Error deleting old event:", err));
@@ -729,64 +757,91 @@
         events.sort((a, b) => a.timestamp - b.timestamp);
         console.log("Filtered and sorted events:", events);
 
-        let eventIndex = 0;
-        events.forEach(ev => {
-          const isAbove = eventIndex % 2 === 0;
-          const eventDate = new Date(ev.time);
+        if (events.length === 0) {
+          timelineDiv.innerHTML = `
+            <div class="empty-timeline">
+              <div style="font-size: 4em; margin-bottom: 20px;">⏰</div>
+              <h3>Your timeline is empty</h3>
+              <p>Add your first personal event to get started!</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Calculate date range
+        const dates = events.map(e => new Date(e.time));
+        const minDate = new Date(Math.min(...dates));
+        const maxDate = new Date(Math.max(...dates));
+        
+        // Add some padding to the date range
+        const timePadding = (maxDate - minDate) * 0.1 || (7 * 24 * 60 * 60 * 1000); // 10% padding or 7 days minimum
+        const paddedMinDate = new Date(minDate.getTime() - timePadding);
+        const paddedMaxDate = new Date(maxDate.getTime() + timePadding);
+        
+        const containerWidth = timelineDiv.parentElement.clientWidth;
+        
+        // Add today marker if within range
+        const todayTime = today.getTime();
+        if (todayTime >= paddedMinDate.getTime() && todayTime <= paddedMaxDate.getTime()) {
+          const todayPosition = getEventPosition(today, paddedMinDate, paddedMaxDate, containerWidth);
+          const todayMarker = document.createElement('div');
+          todayMarker.className = 'today-marker';
+          todayMarker.style.left = todayPosition + 'px';
+          timelineDiv.appendChild(todayMarker);
+        }
+        
+        // Create events
+        events.forEach((event, index) => {
+          const eventDate = new Date(event.time);
           const isToday = today.toDateString() === eventDate.toDateString();
-          const position = getEventPosition(ev.time);
-          const randomDistance = getRandomDistance();
+          const position = getEventPosition(event.time, paddedMinDate, paddedMaxDate, containerWidth);
+          const isAbove = index % 2 === 0;
           
           const eventDiv = document.createElement('div');
           eventDiv.className = 'timeline-event';
           eventDiv.style.left = position + 'px';
-          eventDiv.style.width = '20px';
-          eventDiv.style.height = '20px';
           
-          // Calculate positions for connector and content
-          const connectorHeight = randomDistance;
-          const contentPosition = randomDistance + 15; // 15px gap between line and box
-          
-          if (isAbove) {
-            eventDiv.innerHTML = `
-              <div class="event-dot ${isToday ? 'today' : ''}" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')"></div>
-              <div class="event-connector above" style="height: ${connectorHeight}px; top: -${connectorHeight}px;"></div>
-              <div class="event-content above ${isToday ? 'today-event' : ''}" style="bottom: ${contentPosition}px;">
-                <div class="event-title">${ev.title}</div>
-                <div class="event-date">${formatDate(ev.time)}</div>
-                <div class="event-time-left">${getTimeUntilEvent(ev.time)}</div>
-                <div class="event-actions">
-                  <button class="btn btn-small" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')">Edit</button>
-                  <button class="btn btn-small btn-danger" onclick="deleteEvent('${ev.id}')">Delete</button>
-                </div>
+          eventDiv.innerHTML = `
+            <div class="event-marker ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')"></div>
+            <div class="event-connector ${isAbove ? 'above' : 'below'}"></div>
+            <div class="event-box ${isAbove ? 'above' : 'below'} ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')">
+              <div class="event-title">${event.title}</div>
+              <div class="event-date">${formatDate(event.time)}</div>
+              <div class="event-time-left">${getTimeUntilEvent(event.time)}</div>
+              <div class="event-actions">
+                <button class="btn btn-small" onclick="event.stopPropagation(); openEditModal('${event.id}', '${event.title}', '${event.time}')">Edit</button>
+                <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
               </div>
-            `;
-          } else {
-            eventDiv.innerHTML = `
-              <div class="event-dot ${isToday ? 'today' : ''}" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')"></div>
-              <div class="event-connector below" style="height: ${connectorHeight}px; bottom: -${connectorHeight}px;"></div>
-              <div class="event-content below ${isToday ? 'today-event' : ''}" style="top: ${contentPosition}px;">
-                <div class="event-title">${ev.title}</div>
-                <div class="event-date">${formatDate(ev.time)}</div>
-                <div class="event-time-left">${getTimeUntilEvent(ev.time)}</div>
-                <div class="event-actions">
-                  <button class="btn btn-small" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')">Edit</button>
-                  <button class="btn btn-small btn-danger" onclick="deleteEvent('${ev.id}')">Delete</button>
-                </div>
-              </div>
-            `;
-          }
+            </div>
+          `;
           
           timelineDiv.appendChild(eventDiv);
-          eventIndex++;
         });
         
-        // Auto-scroll to show today
-        setTimeout(scrollToToday, 100);
+        // Generate year markers
+        const yearRange = paddedMaxDate.getFullYear() - paddedMinDate.getFullYear();
+        const yearsDiv = document.getElementById("timelineYears");
+        
+        if (yearRange <= 10) {
+          // Show years
+          for (let year = paddedMinDate.getFullYear(); year <= paddedMaxDate.getFullYear(); year++) {
+            const yearDiv = document.createElement('div');
+            yearDiv.textContent = year;
+            yearsDiv.appendChild(yearDiv);
+          }
+        } else {
+          // Show start and end years only
+          const startDiv = document.createElement('div');
+          startDiv.textContent = paddedMinDate.getFullYear();
+          const endDiv = document.createElement('div');
+          endDiv.textContent = paddedMaxDate.getFullYear();
+          yearsDiv.appendChild(startDiv);
+          yearsDiv.appendChild(endDiv);
+        }
       }, (error) => {
         console.error("Error loading events:", error);
         timelineDiv.innerHTML = `
-          <div class="empty-timeline" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+          <div class="empty-timeline">
             <div style="font-size: 4em; margin-bottom: 20px;">❌</div>
             <h3>Error loading events</h3>
             <p>${error.message}</p>
@@ -801,16 +856,16 @@
       return date.toLocaleDateString() + " " + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
 
-    // Check if date is today
-    function isToday(dateString) {
-      const today = new Date();
-      const eventDate = new Date(dateString);
-      return today.toDateString() === eventDate.toDateString();
-    }
-
     // Make functions global for onclick handlers
     window.openEditModal = openEditModal;
     window.deleteEvent = deleteEvent;
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      if (auth.currentUser) {
+        loadEvents();
+      }
+    });
   </script>
 </body>
 </html>
