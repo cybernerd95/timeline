@@ -175,6 +175,33 @@
       z-index: 3;
     }
 
+    .event-dot::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 0;
+      background: linear-gradient(to top, #667eea, #764ba2);
+      transition: height 0.6s ease-out;
+      z-index: 1;
+    }
+
+    .event-dot.animate::before {
+      height: 60px;
+    }
+
+    .event-dot.animate-below::before {
+      top: 100%;
+      height: 0;
+      transition: height 0.6s ease-out;
+    }
+
+    .event-dot.animate-below.animate::before {
+      height: 60px;
+    }
+
     .event-dot.today {
       background: #ff6b6b;
       border-color: #ff6b6b;
@@ -198,65 +225,84 @@
       border: 2px solid #667eea;
       min-width: 180px;
       text-align: center;
-      transform: translateX(-50%);
+      transform: translateX(-50%) translateY(20px);
       left: 50%;
+      opacity: 0;
+      transition: all 0.4s ease-out;
+      transition-delay: 0.6s;
+    }
+
+    .event-content.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
 
     .event-content.below {
       top: 40px;
+      transform: translateX(-50%) translateY(-20px);
+    }
+
+    .event-content.below.show {
+      transform: translateX(-50%) translateY(0);
     }
 
     .event-title {
       font-weight: 600;
       color: #333;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
+      font-size: 0.9em;
     }
 
     .event-date {
-      font-size: 0.9em;
+      font-size: 0.8em;
       color: #666;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+    }
+
+    .event-time-left {
+      font-size: 0.7em;
+      color: #999;
+      margin-bottom: 8px;
+      font-style: italic;
     }
 
     .event-actions {
       display: flex;
-      gap: 5px;
+      gap: 4px;
       justify-content: center;
     }
 
     .btn-small {
-      padding: 5px 10px;
-      font-size: 12px;
-      border-radius: 5px;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 4px;
     }
 
-    .today-indicator {
+    .today-marker {
       position: absolute;
-      top: -100px;
+      top: 50%;
+      left: 200px;
+      width: 3px;
+      height: 120px;
+      background: #ff6b6b;
+      transform: translateY(-50%);
+      z-index: 4;
+      box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+    }
+
+    .today-marker::before {
+      content: 'TODAY';
+      position: absolute;
+      top: -25px;
       left: 50%;
       transform: translateX(-50%);
       background: #ff6b6b;
       color: white;
-      padding: 8px 15px;
-      border-radius: 20px;
-      font-size: 0.9em;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.7em;
       font-weight: 600;
-      animation: bounce 1s infinite alternate;
-    }
-
-    @keyframes bounce {
-      0% { transform: translateX(-50%) translateY(0); }
-      100% { transform: translateX(-50%) translateY(-5px); }
-    }
-
-    .today-indicator::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 8px solid transparent;
-      border-top-color: #ff6b6b;
+      white-space: nowrap;
     }
 
     .modal {
@@ -588,20 +634,39 @@
       }
     });
 
-    // Format date for display
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      return date.toLocaleDateString() + " " + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    }
-
-    // Check if date is today
-    function isToday(dateString) {
+    // Calculate position based on date difference from today
+    function getEventPosition(eventDate) {
       const today = new Date();
-      const eventDate = new Date(dateString);
-      return today.toDateString() === eventDate.toDateString();
+      const event = new Date(eventDate);
+      const daysDiff = Math.floor((event - today) / (1000 * 60 * 60 * 24));
+      
+      // Today is at position 200px, each day is 80px apart
+      return 200 + (daysDiff * 80);
     }
 
-    // Load Events - Filter by current user
+    // Calculate time until/since event
+    function getTimeUntilEvent(eventDate) {
+      const now = new Date();
+      const event = new Date(eventDate);
+      const diffMs = event - now;
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 0) {
+        return `${diffDays} day${diffDays === 1 ? '' : 's'} left`;
+      } else if (diffDays === 0) {
+        return 'Today!';
+      } else {
+        return `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} ago`;
+      }
+    }
+
+    // Auto-scroll timeline to show today
+    function scrollToToday() {
+      const timelineContainer = document.querySelector('.timeline-container');
+      timelineContainer.scrollLeft = Math.max(0, 200 - timelineContainer.clientWidth / 2);
+    }
+
+    // Load Events - Filter by current user and remove old events
     function loadEvents() {
       console.log("Loading events for user:", auth.currentUser?.email);
       
@@ -615,10 +680,15 @@
         
         timelineDiv.innerHTML = "";
         
+        // Add today marker
+        const todayMarker = document.createElement('div');
+        todayMarker.className = 'today-marker';
+        timelineDiv.appendChild(todayMarker);
+        
         if (snapshot.empty) {
           console.log("No events found for user");
-          timelineDiv.innerHTML = `
-            <div class="empty-timeline">
+          timelineDiv.innerHTML += `
+            <div class="empty-timeline" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
               <div style="font-size: 4em; margin-bottom: 20px;">⏰</div>
               <h3>Your timeline is empty</h3>
               <p>Add your first personal event to get started!</p>
@@ -630,30 +700,47 @@
           return;
         }
 
-        // Convert to array and sort by timestamp
+        // Convert to array and filter out old events
         const events = [];
+        const today = new Date();
+        const cutoffDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000)); // 7 days ago
+        
         snapshot.forEach(doc => {
-          console.log("Event found:", doc.id, doc.data());
-          events.push({ id: doc.id, ...doc.data() });
+          const eventData = doc.data();
+          const eventDate = new Date(eventData.time);
+          
+          console.log("Event found:", doc.id, eventData);
+          
+          // Remove events older than 7 days
+          if (eventDate < cutoffDate) {
+            console.log("Removing old event:", doc.id);
+            deleteDoc(doc.ref).catch(err => console.error("Error deleting old event:", err));
+          } else {
+            events.push({ id: doc.id, ...eventData });
+          }
         });
         
         events.sort((a, b) => a.timestamp - b.timestamp);
-        console.log("Sorted events:", events);
+        console.log("Filtered and sorted events:", events);
 
         let eventIndex = 0;
         events.forEach(ev => {
-          const isEvenIndex = eventIndex % 2 === 0;
-          const isTodayEvent = isToday(ev.time);
+          const isAbove = eventIndex % 2 === 0;
+          const eventDate = new Date(ev.time);
+          const isToday = today.toDateString() === eventDate.toDateString();
+          const position = getEventPosition(ev.time);
           
           const eventDiv = document.createElement('div');
           eventDiv.className = 'timeline-event';
+          eventDiv.style.left = position + 'px';
+          
           eventDiv.innerHTML = `
-            <div class="event-dot ${isTodayEvent ? 'today' : ''}" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')">
-              ${isTodayEvent ? '<div class="today-indicator">TODAY</div>' : ''}
-            </div>
-            <div class="event-content ${isEvenIndex ? '' : 'below'}">
+            <div class="event-dot ${isToday ? 'today' : ''}" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')"></div>
+            <div class="event-connector ${isAbove ? 'above' : 'below'}"></div>
+            <div class="event-content ${isAbove ? 'above' : 'below'}">
               <div class="event-title">${ev.title}</div>
               <div class="event-date">${formatDate(ev.time)}</div>
+              <div class="event-time-left">${getTimeUntilEvent(ev.time)}</div>
               <div class="event-actions">
                 <button class="btn btn-small" onclick="openEditModal('${ev.id}', '${ev.title}', '${ev.time}')">Edit</button>
                 <button class="btn btn-small btn-danger" onclick="deleteEvent('${ev.id}')">Delete</button>
@@ -664,16 +751,32 @@
           timelineDiv.appendChild(eventDiv);
           eventIndex++;
         });
+        
+        // Auto-scroll to show today
+        setTimeout(scrollToToday, 100);
       }, (error) => {
         console.error("Error loading events:", error);
         timelineDiv.innerHTML = `
-          <div class="empty-timeline">
+          <div class="empty-timeline" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
             <div style="font-size: 4em; margin-bottom: 20px;">❌</div>
             <h3>Error loading events</h3>
             <p>${error.message}</p>
           </div>
         `;
       });
+    }
+
+    // Format date for display
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString() + " " + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+
+    // Check if date is today
+    function isToday(dateString) {
+      const today = new Date();
+      const eventDate = new Date(dateString);
+      return today.toDateString() === eventDate.toDateString();
     }
 
     // Make functions global for onclick handlers
