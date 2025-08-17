@@ -132,20 +132,9 @@
       position: relative;
       padding: 150px 50px;
       overflow-x: auto;
-      min-height: 400px;
+      min-height: 500px;
       background: #fafbfc;
       border-radius: 15px;
-    }
-
-    .timeline-header {
-      text-align: center;
-      margin-bottom: 40px;
-      background: #4a4a4a;
-      color: white;
-      padding: 15px;
-      border-radius: 8px;
-      font-size: 1.5em;
-      font-weight: 600;
     }
 
     .timeline-line {
@@ -215,12 +204,10 @@
 
     .event-connector.above {
       bottom: 50%;
-      height: 60px;
     }
 
     .event-connector.below {
       top: 50%;
-      height: 60px;
     }
 
     .event-connector::after {
@@ -230,6 +217,7 @@
       height: 0;
       left: 50%;
       transform: translateX(-50%);
+      z-index: 3;
     }
 
     .event-connector.above::after {
@@ -267,11 +255,11 @@
     }
 
     .event-box.above {
-      bottom: 70px;
+      bottom: 0;
     }
 
     .event-box.below {
-      top: 70px;
+      top: 0;
     }
 
     .event-box.today {
@@ -479,7 +467,6 @@
       </div>
 
       <div class="timeline-container">
-        <div class="timeline-header">Key Events Timeline</div>
         <div class="timeline-line"></div>
         <div id="timeline" class="timeline-events">
           <div class="empty-timeline">
@@ -679,16 +666,18 @@
       }
     });
 
-    // Calculate position based on timeline span
-    function getEventPosition(eventDate, minDate, maxDate, containerWidth) {
-      const eventTime = new Date(eventDate).getTime();
-      const minTime = minDate.getTime();
-      const maxTime = maxDate.getTime();
+    // Get evenly distributed position based on chronological order
+    function getEvenlyDistributedPosition(chronologicalIndex, totalEvents, containerWidth) {
+      const margin = 100; // 50px margin on each side
+      const availableWidth = containerWidth - margin;
       
-      if (maxTime === minTime) return containerWidth / 2;
+      if (totalEvents === 1) {
+        return containerWidth / 2;
+      }
       
-      const percentage = (eventTime - minTime) / (maxTime - minTime);
-      return percentage * (containerWidth - 100) + 50; // 50px margin on each side
+      // Distribute events evenly across available width based on chronological order
+      const spacing = availableWidth / (totalEvents - 1);
+      return 50 + (chronologicalIndex * spacing);
     }
 
     // Calculate time until/since event
@@ -707,7 +696,7 @@
       }
     }
 
-    // Load Events - Filter by current user and remove old events
+    // Load Events with chronological positioning - MODIFIED FOR PROPER DATE ORDERING
     function loadEvents() {
       console.log("Loading events for user:", auth.currentUser?.email);
       
@@ -737,7 +726,7 @@
         // Convert to array and filter out old events
         const events = [];
         const today = new Date();
-        const cutoffDate = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)); // 30 days ago
+        const cutoffDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000)); // Only remove events older than 7 days
         
         snapshot.forEach(doc => {
           const eventData = doc.data();
@@ -745,7 +734,7 @@
           
           console.log("Event found:", doc.id, eventData);
           
-          // Remove events older than 30 days
+          // Remove events older than 7 days
           if (eventDate < cutoffDate) {
             console.log("Removing old event:", doc.id);
             deleteDoc(doc.ref).catch(err => console.error("Error deleting old event:", err));
@@ -754,6 +743,7 @@
           }
         });
         
+        // Sort events by timestamp for chronological order - THIS IS THE KEY FIX
         events.sort((a, b) => a.timestamp - b.timestamp);
         console.log("Filtered and sorted events:", events);
 
@@ -768,75 +758,71 @@
           return;
         }
 
-        // Calculate date range
-        const dates = events.map(e => new Date(e.time));
-        const minDate = new Date(Math.min(...dates));
-        const maxDate = new Date(Math.max(...dates));
-        
-        // Add some padding to the date range
-        const timePadding = (maxDate - minDate) * 0.1 || (7 * 24 * 60 * 60 * 1000); // 10% padding or 7 days minimum
-        const paddedMinDate = new Date(minDate.getTime() - timePadding);
-        const paddedMaxDate = new Date(maxDate.getTime() + timePadding);
-        
         const containerWidth = timelineDiv.parentElement.clientWidth;
         
-        // Add today marker if within range
-        const todayTime = today.getTime();
-        if (todayTime >= paddedMinDate.getTime() && todayTime <= paddedMaxDate.getTime()) {
-          const todayPosition = getEventPosition(today, paddedMinDate, paddedMaxDate, containerWidth);
-          const todayMarker = document.createElement('div');
-          todayMarker.className = 'today-marker';
-          todayMarker.style.left = todayPosition + 'px';
-          timelineDiv.appendChild(todayMarker);
-        }
-        
-        // Create events
-        events.forEach((event, index) => {
+        // Create events evenly distributed but in chronological order
+        events.forEach((event, chronologicalIndex) => {
           const eventDate = new Date(event.time);
           const isToday = today.toDateString() === eventDate.toDateString();
-          const position = getEventPosition(event.time, paddedMinDate, paddedMaxDate, containerWidth);
-          const isAbove = index % 2 === 0;
+          
+          // Get evenly distributed position based on chronological order
+          const position = getEvenlyDistributedPosition(chronologicalIndex, events.length, containerWidth);
+          
+          // Alternate between above and below based on chronological order
+          const isAbove = chronologicalIndex % 2 === 0;
+          
+          // Fixed connector height and spacing for consistency
+          const connectorHeight = 70;
+          const boxSpacing = 15;
+          const totalDistance = connectorHeight + boxSpacing;
           
           const eventDiv = document.createElement('div');
           eventDiv.className = 'timeline-event';
           eventDiv.style.left = position + 'px';
           
-          eventDiv.innerHTML = `
-            <div class="event-marker ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')"></div>
-            <div class="event-connector ${isAbove ? 'above' : 'below'}"></div>
-            <div class="event-box ${isAbove ? 'above' : 'below'} ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')">
-              <div class="event-title">${event.title}</div>
-              <div class="event-date">${formatDate(event.time)}</div>
-              <div class="event-time-left">${getTimeUntilEvent(event.time)}</div>
-              <div class="event-actions">
-                <button class="btn btn-small" onclick="event.stopPropagation(); openEditModal('${event.id}', '${event.title}', '${event.time}')">Edit</button>
-                <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
+          if (isAbove) {
+            eventDiv.innerHTML = `
+              <div class="event-marker ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')"></div>
+              <div class="event-connector above" style="height: ${connectorHeight}px;"></div>
+              <div class="event-box above ${isToday ? 'today' : ''}" style="bottom: ${totalDistance}px;" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')">
+                <div class="event-title">${event.title}</div>
+                <div class="event-date">${formatDate(event.time)}</div>
+                <div class="event-time-left">${getTimeUntilEvent(event.time)}</div>
+                <div class="event-actions">
+                  <button class="btn btn-small" onclick="event.stopPropagation(); openEditModal('${event.id}', '${event.title}', '${event.time}')">Edit</button>
+                  <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
+                </div>
               </div>
-            </div>
-          `;
+            `;
+          } else {
+            eventDiv.innerHTML = `
+              <div class="event-marker ${isToday ? 'today' : ''}" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')"></div>
+              <div class="event-connector below" style="height: ${connectorHeight}px;"></div>
+              <div class="event-box below ${isToday ? 'today' : ''}" style="top: ${totalDistance}px;" onclick="openEditModal('${event.id}', '${event.title}', '${event.time}')">
+                <div class="event-title">${event.title}</div>
+                <div class="event-date">${formatDate(event.time)}</div>
+                <div class="event-time-left">${getTimeUntilEvent(event.time)}</div>
+                <div class="event-actions">
+                  <button class="btn btn-small" onclick="event.stopPropagation(); openEditModal('${event.id}', '${event.title}', '${event.time}')">Edit</button>
+                  <button class="btn btn-small btn-danger" onclick="event.stopPropagation(); deleteEvent('${event.id}')">Delete</button>
+                </div>
+              </div>
+            `;
+          }
           
           timelineDiv.appendChild(eventDiv);
         });
         
-        // Generate year markers
-        const yearRange = paddedMaxDate.getFullYear() - paddedMinDate.getFullYear();
-        const yearsDiv = document.getElementById("timelineYears");
-        
-        if (yearRange <= 10) {
-          // Show years
-          for (let year = paddedMinDate.getFullYear(); year <= paddedMaxDate.getFullYear(); year++) {
+        // Generate year markers based on event dates
+        if (events.length > 0) {
+          const years = [...new Set(events.map(e => new Date(e.time).getFullYear()))].sort();
+          const yearsDiv = document.getElementById("timelineYears");
+          
+          years.forEach(year => {
             const yearDiv = document.createElement('div');
             yearDiv.textContent = year;
             yearsDiv.appendChild(yearDiv);
-          }
-        } else {
-          // Show start and end years only
-          const startDiv = document.createElement('div');
-          startDiv.textContent = paddedMinDate.getFullYear();
-          const endDiv = document.createElement('div');
-          endDiv.textContent = paddedMaxDate.getFullYear();
-          yearsDiv.appendChild(startDiv);
-          yearsDiv.appendChild(endDiv);
+          });
         }
       }, (error) => {
         console.error("Error loading events:", error);
@@ -867,5 +853,3 @@
       }
     });
   </script>
-</body>
-</html>
